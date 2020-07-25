@@ -7,6 +7,8 @@ Sample usage:
         do_something(batch)
     feed.close()
 '''
+
+
 import cv2
 from numpy import ndarray
 
