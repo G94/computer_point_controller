@@ -23,8 +23,8 @@ class InputFeeder:
         if input_type == 'video' or input_type == 'image':
             self.input_file = input_file
     
-    def load_data(self):
 
+    def load_data(self):
         if self.input_type == 'video':
             self.cap = cv2.VideoCapture(self.input_file)
 
@@ -41,8 +41,8 @@ class InputFeeder:
         '''
         while True:
             for _ in range(10):
-                _, frame = self.cap.read()
-            yield frame
+                flag, frame = self.cap.read()
+            yield flag, frame
 
 
     def close(self):
