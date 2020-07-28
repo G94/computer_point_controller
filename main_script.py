@@ -18,7 +18,7 @@ from src.gaze_estimation import GazeEstimation
 from openvino.inference_engine import IENetwork, IECore
 
 def facedetection_main(args):
-    model = args.model
+    model = args.fc_model
     device = args.device
     file_type = args.input_type
     video_file = args.video
@@ -50,7 +50,8 @@ def facedetection_main(args):
     feed.close()
 
 def headdetection_main(args):
-    model = args.model
+    fc_model = args.fc_model
+    hp_model = args.hp_model
     device = args.device
     file_type = args.input_type
     video_file = args.video
@@ -60,10 +61,10 @@ def headdetection_main(args):
     start_model_load_time = time.time()
 
     ### loading model required
-    hpe_detection = HeadPoseEstimation(model, device)
+    hpe_detection = HeadPoseEstimation(hp_model, device)
     hpe_detection.load_model()
 
-    fc_detection = FaceDetection(model, device)
+    fc_detection = FaceDetection(fc_model, device)
     fc_detection.load_model()
 
 
@@ -77,16 +78,16 @@ def headdetection_main(args):
     video_len = int(feed.cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(feed.cap.get(cv2.CAP_PROP_FPS))
 
-    # out_video = cv2.VideoWriter(os.path.join(output_path, 'headposeestimation_video.mp4'), cv2.VideoWriter_fourcc(*'avc1'), fps, (initial_w, initial_h), True)
+    out_video = cv2.VideoWriter(os.path.join(output_path, 'headposeestimation_video.mp4'), cv2.VideoWriter_fourcc(*'avc1'), fps, (initial_w, initial_h), True)
 
     for flag, frame in feed.next_batch():    
         if not flag:
             break
-        coords, image = fc_detection.predict(frame)
-
+        
+        image, coords = fc_detection.predict(frame)
         result = hpe_detection.predict(frame, coords)
 
-        # out_video.write(image)
+        out_video.write(result)
 
     feed.close()
 
@@ -96,8 +97,8 @@ if __name__=='__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fc_model', required = True,  description = "Face detection model folder")
-    parser.add_argument('--hp_model', required = True, description = "Head pose estimation model folder")
+    parser.add_argument('--fc_model', required = True,  help = "Face detection model folder")
+    parser.add_argument('--hp_model', required = True, help = "Head pose estimation model folder")
 
     parser.add_argument('--device', default = 'CPU')
     parser.add_argument('--input_type', default = 'video')

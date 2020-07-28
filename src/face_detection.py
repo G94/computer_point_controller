@@ -114,13 +114,13 @@ class FaceDetection:
         box = []
         
         for ob in coords:
-                x_facet = (int(ob[0] * self.img_width), int(ob[1] * self.img_height))
-                y_facet = (int(ob[2] * self.img_width), int(ob[2] * self.img_height))    
+                left_facet = (int(ob[0] * self.img_width), int(ob[1] * self.img_height))
+                right_facet = (int(ob[2] * self.img_width), int(ob[3] * self.img_height))    
                 
-                cv2.rectangle(image, x_facet, y_facet, (0, 55, 255), 1)
-                box.append([x_facet[0], x_facet[1], y_facet[0], y_facet[1]])       
+                cv2.rectangle(image, left_facet, right_facet, (0, 55, 255), 1)
+                box.append([left_facet[0], left_facet[1], right_facet[0], right_facet[1]])       
         
-        return box, image
+        return image, box
 
 
     def predict(self, image):

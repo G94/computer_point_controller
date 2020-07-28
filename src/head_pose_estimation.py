@@ -10,6 +10,7 @@ from math import cos, sin, pi
 from openvino.inference_engine import IENetwork, IECore
 
 
+ANGLE_CONVERSION = 180.0
 
 
 class HeadPoseEstimation:
@@ -108,50 +109,49 @@ class HeadPoseEstimation:
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''
+     
+ 
+        x_facet_distance =  coords[0][2] - coords[0][0] 
+        y_facet_distance =  coords[0][3] - coords[0][1] 
 
-        faceBoundingBoxWidth = coords[0].size[0]
-        faceBoundingBoxHeight = coords[0].size[1]
-        
         yaw = list_angles[0]
         pitch = list_angles[1]
         roll = list_angles[2]
 
-        sinY = sin(yaw * pi / 180.0)
-        sinP = sin(pitch * pi / 180.0)
-        sinR = sin(roll * pi / 180.0)
+        sin_y = sin(yaw * pi / ANGLE_CONVERSION)
+        sin_p = sin(pitch * pi / ANGLE_CONVERSION)
+        sin_r = sin(roll * pi / ANGLE_CONVERSION)
 
-        cosY = cos(yaw * pi / 180.0)
-        cosP = cos(pitch * pi / 180.0)
-        cosR = cos(roll * pi / 180.0)
+        cos_y = cos(yaw * pi / ANGLE_CONVERSION)
+        cos_p = cos(pitch * pi / ANGLE_CONVERSION)
+        cos_r = cos(roll * pi / ANGLE_CONVERSION)
         
-        axisLength = 0.4 * faceBoundingBoxWidth
-        xCenter = int(image[0].position[0] + faceBoundingBoxWidth / 2)
-        yCenter = int(image[0].position[1] + faceBoundingBoxHeight / 2)
-
-        if self.hp_out:   
-            #center to right
-            cv2.line(frame, (xCenter, yCenter), 
-                            (((xCenter) + int (axisLength * (cosR * cosY + sinY * sinP * sinR))),
-                            ((yCenter) + int (axisLength * cosP * sinR))),
-                            (0, 0, 255), thickness=2)
-            #center to top
-            cv2.line(frame, (xCenter, yCenter), 
-                            (((xCenter) + int (axisLength * (cosR * sinY * sinP + cosY * sinR))),
-                            ((yCenter) - int (axisLength * cosP * cosR))),
-                            (0, 255, 0), thickness=2)
-            
-            #Center to forward
-            cv2.line(frame, (xCenter, yCenter), 
-                            (((xCenter) + int (axisLength * sinY * cosP)),
-                            ((yCenter) + int (axisLength * sinP))),
-                            (255, 0, 0), thickness=2)       
-
+        axisLength = 0.5 * coords[0][0]
         
+        x_center = int(coords[0][0] + x_facet_distance / 2)
+        y_center = int(coords[0][1] + y_facet_distance / 2)
 
 
 
+        #center to right
+        cv2.line(image, (x_center, y_center), 
+                        (((x_center) + int (axisLength * (cos_r * cos_y + sin_y * sin_p * sin_r))),
+                        ((y_center) + int (axisLength * cos_p * sin_r))),
+                        (0, 0, 255), thickness=2)
+        #center to top
+        cv2.line(image, (x_center, y_center), 
+                        (((x_center) + int (axisLength * (cos_r * sin_y * sin_p + cos_y * sin_r))),
+                        ((y_center) - int (axisLength * cos_p * cos_r))),
+                        (0, 255, 0), thickness=2)
+        
+        #Center to forward
+        cv2.line(image, (x_center, y_center), 
+                        (((x_center) + int (axisLength * sin_y * cos_p)),
+                        ((y_center) + int (axisLength * sin_p))),
+                        (255, 0, 0), thickness=2)       
 
-        return box, image
+        return image
+
 
 
     def predict(self, image, coords):
@@ -166,7 +166,6 @@ class HeadPoseEstimation:
         resize_frame = self.preprocess_input(image)
         # print("InputFeeder sucessfully completed")
 
-        print(self.input_name)
         outputs = self.net.infer({self.input_name: resize_frame})
         # print("InputFeeder sucessfully completed")
         # print([self.output_name])
@@ -175,8 +174,6 @@ class HeadPoseEstimation:
         list_angles = self.preprocess_output(outputs)
 
         # print("InputFeeder sucessfully completed")
-        post_image, post_coord = self.draw_outputs(list_angles, image, coords)
-        return list_angles
+        image = self.draw_outputs(list_angles, image, coords)
+        return image
 
-        # except Exception as e:
-        #     print("Error in function self.predict:", e)
