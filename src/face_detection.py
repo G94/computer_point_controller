@@ -5,14 +5,10 @@ This has been provided just to give you an idea of how to structure your model c
 import os
 import cv2
 import time
-# os.chdir("C:\Program Files (x86)\IntelSWTools\openvino_2020.4.287\python\python3.6")
 
 
 from openvino.inference_engine import IENetwork, IECore
-from input_feeder import InputFeeder
 
-
-print(IENetwork)
 
 class FaceDetection:
     '''
@@ -150,68 +146,3 @@ class FaceDetection:
         # except Exception as e:
         #     print("Error in function self.predict:", e)
 
-
-def main(args):
-    
-
-    model = args.model
-    device = args.device
-    file_type = args.input_type
-    video_file = args.video
-
-    # max_people = args.max_people
-    # threshold = args.threshold
-    output_path = args.output_path
-
-    start_model_load_time = time.time()
-    fc_detection = FaceDetection(model, device)
-
-    fc_detection.load_model()
-    print("load model sucessfully load")
-
-    feed = InputFeeder(input_type = file_type, input_file = video_file)
-    feed.load_data()
-
-    initial_w = int(feed.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    initial_h = int(feed.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    video_len = int(feed.cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = int(feed.cap.get(cv2.CAP_PROP_FPS))
-
-    out_video = cv2.VideoWriter(os.path.join(output_path, 'facedetection_video.mp4'), cv2.VideoWriter_fourcc(*'avc1'), fps, (initial_w, initial_h), True)
-    
-    print("InputFeeder sucessfully completed")
-
-    for flag, frame in feed.next_batch():
-        # print(type(batch))
-    
-        if not flag:
-            break
-        # try:
-            # cv2.imshow('video', cv2.resize(frame,(500,500)))
-        coords, image = fc_detection.predict(frame)
-        print("video write")
-        out_video.write(image)
-
-        # except Exception as e:
-        #     print(str(e))
-        
-    feed.close()
-
-
-if __name__=='__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', required = True)
-    parser.add_argument('--device', default = 'CPU')
-    parser.add_argument('--input_type', default = 'video')
-    parser.add_argument('--video', default = './bin/demo.mp4')
-    parser.add_argument('--output_path', default = './result/')
-    # parser.add_argument('--queue_param', default = None)
-    # parser.add_argument('--output_path', default = '/results')
-    # parser.add_argument('--max_people', default = 2)
-    # parser.add_argument('--threshold', default = 0.60)
-
-    args = parser.parse_args()
-
-    main(args)
