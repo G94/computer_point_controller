@@ -163,5 +163,5 @@ class HeadPoseEstimation:
         list_angles = self.preprocess_output(outputs)
 
         image = self.draw_outputs(list_angles, image, coords)
-        return image
+        return image, list_angles
 

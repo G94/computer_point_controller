@@ -109,7 +109,7 @@ class FaceDetection:
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''
-        
+        original_image = image.copy()
         box = []
         
         for ob in coords:
@@ -117,10 +117,14 @@ class FaceDetection:
                 right_facet = (int(ob[2] * self.img_width), int(ob[3] * self.img_height))    
                 
                 cv2.rectangle(image, left_facet, right_facet, (0, 55, 255), 1)
-                box.append([left_facet[0], left_facet[1], right_facet[0], right_facet[1]])       
+                box.append([left_facet[0], left_facet[1], right_facet[0], right_facet[1]])   
         
-        return image, box
-
+        box_1 = box[0]
+        # face_image = original_image[left_facet[1]:right_facet[1], left_facet[0]:right_facet[0]] 
+        face_image = original_image[box_1[1]:box_1[3], box_1[0]:box_1[2]]
+        print(face_image)  
+        print("-----face image")     
+        return image, box, face_image
 
     def predict(self, image):
         '''
@@ -139,8 +143,8 @@ class FaceDetection:
         coords = self.preprocess_output(outputs[self.output_name])
 
         # print("InputFeeder sucessfully completed")
-        post_image, post_coord = self.draw_outputs(coords, image)
-        return post_image, post_coord
+        post_image, post_coord, face_image = self.draw_outputs(coords, image)
+        return post_image, post_coord, face_image
 
         # except Exception as e:
         #     print("Error in function self.predict:", e)

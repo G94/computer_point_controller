@@ -83,108 +83,87 @@ class FacialLandmarkDetection:
         return p_frame
 
 
-    def preprocess_output(self, outputs, image, eye_surrounding_area = 10):
+    def preprocess_output(self, outputs, image, coords):
         '''
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
         '''
+        box = []
+        pairs_coords = [out.reshape((-1, 2)).tolist() for out in outputs]
 
-        leye_x = outputs[0][0].tolist()[0][0]
-        leye_y = outputs[0][1].tolist()[0][0]
-        reye_x = outputs[0][2].tolist()[0][0]
-        reye_y = outputs[0][3].tolist()[0][0]
+        x_facet_distance =  coords[0][2] - coords[0][0] 
+        y_facet_distance =  coords[0][3] - coords[0][1] 
 
-        box = (leye_x, leye_y, reye_x, reye_y)
+        for item  in pairs_coords[0]:
+            center = np.array((coords[0][0], coords[0][1])) +  np.array((x_facet_distance, y_facet_distance)) * np.array((item[0], item[1]))
+            
+            cv2.circle(image,tuple(center.astype(int)), 2, (255, 255, 0), 4) 
 
-        h, w = image.shape[0:2]
-        # w = image.shape[1]
-        box = box * np.array([w, h, w, h])
-        box = box.astype(np.int32)
-
-        (lefteye_x, lefteye_y, righteye_x, righteye_y) = box
-        # cv2.rectangle(image,(lefteye_x,lefteye_y),(righteye_x,righteye_y),(255,0,0))
-
-        le_xmin = lefteye_x - eye_surrounding_area
-        le_ymin = lefteye_y - eye_surrounding_area
-        le_xmax = lefteye_x + eye_surrounding_area
-        le_ymax = lefteye_y + eye_surrounding_area
-
-        re_xmin = righteye_x - eye_surrounding_area
-        re_ymin = righteye_y - eye_surrounding_area
-        re_xmax = righteye_x + eye_surrounding_area
-        re_ymax = righteye_y + eye_surrounding_area
-
-        left_eye = image[le_ymin:le_ymax, le_xmin:le_xmax]
-        right_eye = image[re_ymin:re_ymax, re_xmin:re_xmax]
-        eye_coords = [[le_xmin, le_ymin, le_xmax, le_ymax], [re_xmin, re_ymin, re_xmax, re_ymax]]
-        ## 
-        return (lefteye_x, lefteye_y), (righteye_x, righteye_y), eye_coords, left_eye, right_eye
+        return None
 
     def draw_outputs(self, outputs, image, coords):
         '''
-        :param coords: coordinates of the box
-        :param image: image where to draw the box
+        :param outputs: Outputs are the coordinates for each landmark
+        :param image: the face image
         '''
-        
+        p_frame = image.copy()
         box = []
-        
-        # keypoints = [landmarks.left_eye,
-        #         landmarks.right_eye,
-        #         landmarks.nose_tip,
-        #         landmarks.left_lip_corner,
-        #         landmarks.right_lip_corner]
-        
-        # out[self.output_blob].reshape((-1, 2))) \
-        #               for out in outputs
-
-        ##3 join them in pairs
         pairs_coords = [out.reshape((-1, 2)).tolist() for out in outputs]
-        # print(pairs_coords)
-        # print(pairs_coords[0][1])
-        # print("---")
-        # print(pairs_coords[0][2])
-        # print(pairs_coords[1])
-        # sys.exit(0)
-        # left_eye_x = (landmarks.left_eye[0] * faceBoundingBoxWidth + roi[0].position[0])
-        # left_eye_y = (landmarks.left_eye[1] * faceBoundingBoxHeight + roi[0].position[1])
-        
-        # right_eye_x = (landmarks.right_eye[0] * faceBoundingBoxWidth + roi[0].position[0])
-        # right_eye_y = (landmarks.right_eye[1] * faceBoundingBoxHeight + roi[0].position[1])
-        
-        # nose_tip_x = (landmarks.nose_tip[0] * faceBoundingBoxWidth + roi[0].position[0])
-        # nose_tip_y = (landmarks.nose_tip[1] * faceBoundingBoxHeight + roi[0].position[1])
-        
-        # left_lip_corner_x = (landmarks.left_lip_corner[0] * faceBoundingBoxWidth + roi[0].position[0])
-        # left_lip_corner_y = (landmarks.left_lip_corner[1] * faceBoundingBoxHeight + roi[0].position[1])
+
+        x_facet_distance =  coords[0][2] - coords[0][0] 
+        y_facet_distance =  coords[0][3] - coords[0][1] 
+
+        # x_facet_distance =  coords[0][0] 
+        # y_facet_distance =  coords[0][1]
+      
+        ## loop over each ladnmark to rescale to the scale of the face image
+        eyes_pairs = []
+        for item  in pairs_coords[0][0:2]:
+            # center = np.array((coords[0][0], coords[0][1])) +  np.array((x_facet_distance, y_facet_distance)) * np.array((item[0], item[1]))
+            # center = np.array((x_facet_distance, y_facet_distance)) + np.array((image.shape[0], image.shape[1])) * np.array((item[0], item[1]))
+            x_, y_ = int(item[0] * p_frame.shape[1]), int(item[1] * p_frame.shape[0])
+            center = np.array((x_, y_))
+            eyes_pairs.append(center)
+            cv2.circle(p_frame, tuple(center.astype(int)), 2, (255, 255, 0), 4)
+
+        return p_frame, eyes_pairs
+
+    def cropped_eye(self, eyes_pair_list, face_image):
+        leye_x_min = eyes_pair_list[0][1] - 10
+        leye_x_max = eyes_pair_list[0][1] + 10
+        leye_y_min = eyes_pair_list[0][0] - 10
+        leye_y_max = eyes_pair_list[0][0] + 10
 
 
+        reye_x_min = eyes_pair_list[1][1] - 10
+        reye_x_max = eyes_pair_list[1][1] + 10
+        reye_y_min = eyes_pair_list[1][0] - 10
+        reye_y_max = eyes_pair_list[1][0] + 10
 
-        for item  in pairs_coords[0]:
-            print(item)
-            center = np.array((coords[0][0], coords[0][1])) +  np.array((coords[0][2], coords[0][3])) * np.array((item[0], item[1]))
-            print(center)
-            cv2.circle(image,tuple(center.astype(int)), 10, (255, 255, 0), -1)     
-        
-        return image
+        eye_coords = [[leye_x_min, leye_y_min, leye_x_max, leye_y_max],
+                          [reye_x_min, reye_y_min, reye_x_max, reye_y_max]]
 
+        ### cropping image
+        l_eye_img = face_image[leye_x_min:leye_x_max, leye_y_min:leye_y_max]
+        # cv2.imshow("l_eye_img", l_eye_img)
+        # cv2.waitKey(2000)
+ 
+        r_eye_img = face_image[reye_x_min:reye_x_max, reye_y_min:reye_y_max]       
+
+        return l_eye_img, r_eye_img, eye_coords
 
     def predict(self, image, coords):
         '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
+        :param image: Cropped face Image
+        :param coords: Bounding box of the face
+        :return:    image with landmarks, 
+                    two cropped images for each eye (left and right) 
+                    and the coordinates of each eye in an array.
         '''
-        
-        # try:
+
         resize_frame = self.preprocess_input(image)
-
         outputs = self.net.infer({self.input_name: resize_frame})
-        # print("-----")
-        # print(outputs[self.output_name].shape)
-        # print("-----")
-        # print([self.output_name])
-        # sys.exit(0)
-        ## preprocess_output(self, outputs, image, eye_surrounding_area = 10):
-        #    (lefteye_x, lefteye_y), (righteye_x, righteye_y), eye_coords, left_eye, right_eye = self.preprocess_output(outputs[self.output_name], image, 10)
-        write_image = self.draw_outputs(outputs[self.output_name], image, coords)
+        draw_image, eyes_pairs = self.draw_outputs(outputs[self.output_name], image, coords)
+        l_eye_img, r_eye_img, eye_coords = self.cropped_eye(eyes_pairs, image)
 
-        return write_image
+        return draw_image, l_eye_img, r_eye_img, eye_coords

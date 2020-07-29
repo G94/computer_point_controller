@@ -81,31 +81,26 @@ class GazeEstimation:
         p_frame = cv2.resize(image, (self.input_shape[3], self.input_shape[2]))
         p_frame = p_frame.transpose((2,0,1))
         p_frame = p_frame.reshape(1, *p_frame.shape)
-
         return p_frame
 
 
-    def preprocess_output(self, outputs, prob_threshold = 0.6):
+    def preprocess_output(self, outputs, head_position):
         '''
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
 
         '''
-        coords = []
+        roll = head_position[2]
+        gaze_vector = output / cv2.norm(output)
 
-        outs = outputs[0][0]
+        cosValue = math.cos(roll * math.pi / 180.0)
+        sinValue = math.sin(roll * math.pi / 180.0)
 
-        for out in outs:
-            conf = out[2]
+        x = gaze_vector[0] * cosValue * gaze_vector[1] * sinValue
+        y = gaze_vector[0] * sinValue * gaze_vector[1] * cosValue
 
-            if conf > prob_threshold:
-                x_min = out[3]
-                y_min = out[4]
-                x_max = out[5]
-                y_max = out[6]
-                coords.append([x_min,y_min,x_max,y_max])
 
-        return coords
+        return None
 
     def draw_outputs(self, coords, image):
         '''
@@ -113,37 +108,24 @@ class GazeEstimation:
         :param image: image where to draw the box
         '''
         
-        box = []
-        
-        for ob in coords:
-                x_facet = (int(ob[0] * self.img_width), int(ob[1] * self.img_height))
-                y_facet = (int(ob[2] * self.img_width), int(ob[2] * self.img_height))    
-                
-                cv2.rectangle(image, x_facet, y_facet, (0, 55, 255), 1)
-                box.append([x_facet[0], x_facet[1], y_facet[0], y_facet[1]])       
-        
-        return box, image
+        return None
 
 
-    def predict(self, image):
+    def predict(self, left_eye_image, right_eye_image, list_angles, image):
         '''
         TODO: You will need to complete this method.
         This method is meant for running predictions on the input image.
         '''
 
-        # try:
         resize_frame = self.preprocess_input(image)
-        # print("InputFeeder sucessfully completed")
-        outputs = self.net.infer({self.input_name: resize_frame})
-        # print("InputFeeder sucessfully completed")
-        # print([self.output_name])
-        # print(outputs)
+        gaze_vector = self.net.infer({  'left_eye_image': 1 , 
+                                        'right_eye_image': 2, 
+                                        'head_pose_angles': list_angles})
 
-        coords = self.preprocess_output(outputs[self.output_name])
+        print(gaze_vector)
+        # coords = self.preprocess_output(outputs[self.output_name])
 
-        # print("InputFeeder sucessfully completed")
-        post_image, post_coord = self.draw_outputs(coords, image)
-        return post_image, post_coord
 
-        # except Exception as e:
-        #     print("Error in function self.predict:", e)
+        # post_image, post_coord = self.draw_outputs(coords, image)
+        return  gaze_vector
+
