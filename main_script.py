@@ -167,6 +167,10 @@ def gazedetection_main(args):
     feed = InputFeeder(input_type = file_type, input_file = video_file)
     feed.load_data()
     
+    ### Mouse Controller
+    mouse_controller = MouseController('medium', 'fast')
+
+
     initial_w = int(feed.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     initial_h = int(feed.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     video_len = int(feed.cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -181,20 +185,21 @@ def gazedetection_main(args):
 
         image, coords, face_image = fc_detection.predict(frame)
 
-        ### the cropped face iamge pass to the other models
+        ### the cropped face image pass to the other models
         hp_image, list_angles = hpe_detection.predict(face_image, coords)
         fl_image, l_eye_img, r_eye_img, eye_coords = fl_detection.predict(face_image, coords)
 
-        cv2.imshow("r_eye_img", r_eye_img)
-        cv2.imshow("l_eye_img", l_eye_img)
-        cv2.waitKey(2000)
+        ## validation of the right image is being shared  accross each object
+        # cv2.imshow("r_eye_img", r_eye_img)
+        # cv2.imshow("l_eye_img", l_eye_img)
+        # cv2.waitKey(2000)
 
-        # mouse_coordinate, gaze_vector = ge_detection.predict(l_eye_img, r_eye_img, list_angles)
-        # mouse_controller_object.move(mouse_coordinate[0], mouse_coordinate[1])
+        mouse_coord, gaze_output_random = ge_detection.predict(l_eye_img, r_eye_img, list_angles, face_image)
+       
+        mouse_controller.move(mouse_coord[0], mouse_coord[1])
         # out_video.write(output_image)
 
     feed.close()
-
 
 if __name__=='__main__':
     import argparse

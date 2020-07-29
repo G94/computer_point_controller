@@ -5,6 +5,8 @@ This has been provided just to give you an idea of how to structure your model c
 import os
 import cv2
 import time
+
+import math
 # os.chdir("C:\Program Files (x86)\IntelSWTools\openvino_2020.4.287\python\python3.6")
 
 
@@ -52,7 +54,7 @@ class GazeEstimation:
         self.net = self.core.load_network(network = self.model, device_name = self.device, num_requests = 1)
 
         self.input_name = next(iter(self.model.inputs))
-        self.input_shape = self.model.inputs[self.input_name].shape
+        self.input_shape = self.model.inputs['left_eye_image'].shape
         self.output_name = next(iter(self.model.outputs))
         self.output_shape = self.model.outputs[self.output_name].shape 
 
@@ -78,20 +80,22 @@ class GazeEstimation:
         '''
         self.set_image_metadata(image)
 
+        
         p_frame = cv2.resize(image, (self.input_shape[3], self.input_shape[2]))
         p_frame = p_frame.transpose((2,0,1))
         p_frame = p_frame.reshape(1, *p_frame.shape)
         return p_frame
 
 
-    def preprocess_output(self, outputs, head_position):
+    def preprocess_output(self, gaze_vector_inference, list_angles):
         '''
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
 
         '''
-        roll = head_position[2]
-        gaze_vector = output / cv2.norm(output)
+
+        roll = list_angles[2]
+        gaze_vector = gaze_vector_inference / cv2.norm(gaze_vector_inference)
 
         cosValue = math.cos(roll * math.pi / 180.0)
         sinValue = math.sin(roll * math.pi / 180.0)
@@ -99,15 +103,14 @@ class GazeEstimation:
         x = gaze_vector[0] * cosValue * gaze_vector[1] * sinValue
         y = gaze_vector[0] * sinValue * gaze_vector[1] * cosValue
 
-
-        return None
+        return (x, y)
 
     def draw_outputs(self, coords, image):
         '''
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''
-        
+    
         return None
 
 
@@ -117,15 +120,16 @@ class GazeEstimation:
         This method is meant for running predictions on the input image.
         '''
 
-        resize_frame = self.preprocess_input(image)
-        gaze_vector = self.net.infer({  'left_eye_image': 1 , 
-                                        'right_eye_image': 2, 
+        # resize_frame = self.preprocess_input(image)
+        print("----- predict gaze estimation")
+        left_eye_image = self.preprocess_input(left_eye_image)
+        right_eye_image = self.preprocess_input(right_eye_image)
+
+        gaze_vector = self.net.infer(inputs = {'left_eye_image': left_eye_image , 
+                                        'right_eye_image': right_eye_image, 
                                         'head_pose_angles': list_angles})
 
-        print(gaze_vector)
-        # coords = self.preprocess_output(outputs[self.output_name])
 
-
-        # post_image, post_coord = self.draw_outputs(coords, image)
-        return  gaze_vector
+        cords = self.preprocess_output(gaze_vector[self.output_name][0], list_angles)
+        return  gaze_vector[self.output_name][0], cords
 

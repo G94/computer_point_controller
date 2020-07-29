@@ -122,8 +122,8 @@ class FaceDetection:
         box_1 = box[0]
         # face_image = original_image[left_facet[1]:right_facet[1], left_facet[0]:right_facet[0]] 
         face_image = original_image[box_1[1]:box_1[3], box_1[0]:box_1[2]]
-        print(face_image)  
-        print("-----face image")     
+        
+        # print("-----face image")     
         return image, box, face_image
 
     def predict(self, image):
