@@ -5,22 +5,26 @@ This has been provided just to give you an idea of how to structure your model c
 import os
 import cv2
 import time
-
 import math
-# os.chdir("C:\Program Files (x86)\IntelSWTools\openvino_2020.4.287\python\python3.6")
-
+import numpy as np
 
 from openvino.inference_engine import IENetwork, IECore
 
 
 class GazeEstimation:
     '''
-    Class for the Face Detection Model.
+    Class for the GazeEstimation.
     '''
 
     def __init__(self, model_name, device='CPU', extensions=None):
         '''
-        TODO: Use this to set your instance variables.
+        :param core: 
+        :param model:
+        :param net:
+
+        :param input_name:
+        :param input_shape:
+        :param output_shape:
         '''
 
         self.model_weights = model_name+'.bin'
@@ -44,9 +48,9 @@ class GazeEstimation:
 
     def load_model(self):
         '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
+        This function load the model and their metada.
+        Specify the image input metadata.
+        Specify the output metadata.
         '''
 
         self.core = IECore()
@@ -68,6 +72,9 @@ class GazeEstimation:
         raise NotImplementedError
 
     def set_image_metadata(self, image):
+        """
+        Specify input image metadata
+        """
         if self.flag == False:
             self.img_width = image.shape[1]
             self.img_height = image.shape[0]
@@ -75,12 +82,10 @@ class GazeEstimation:
 
     def preprocess_input(self, image):
         '''
-        Before feeding the data into the model for inference,
-        you might have to preprocess it. This function is where you can do that.
+        :param image:
         '''
         self.set_image_metadata(image)
 
-        
         p_frame = cv2.resize(image, (self.input_shape[3], self.input_shape[2]))
         p_frame = p_frame.transpose((2,0,1))
         p_frame = p_frame.reshape(1, *p_frame.shape)
@@ -89,47 +94,72 @@ class GazeEstimation:
 
     def preprocess_output(self, gaze_vector_inference, list_angles):
         '''
-        Before feeding the output of this model to the next model,
-        you might have to preprocess the output. This function is where you can do that.
-
+        :param gaze_vector_inference: vector of inference from GazeEstimator.
+        :param list_angles: list of angles from Head pose estimation model.
         '''
 
         roll = list_angles[2]
-        gaze_vector = gaze_vector_inference / cv2.norm(gaze_vector_inference)
+        gaze_vector_denormalized = gaze_vector_inference / cv2.norm(gaze_vector_inference)
 
-        cosValue = math.cos(roll * math.pi / 180.0)
-        sinValue = math.sin(roll * math.pi / 180.0)
+        cos_val = math.cos(roll * math.pi / 180.0)
+        sin_val = math.sin(roll * math.pi / 180.0)
 
-        x = gaze_vector[0] * cosValue * gaze_vector[1] * sinValue
-        y = gaze_vector[0] * sinValue * gaze_vector[1] * cosValue
+        x_mouse_coord = gaze_vector_denormalized[0] * cos_val * gaze_vector_denormalized[1] * sin_val
+        y_mouse_coord = gaze_vector_denormalized[0] * sin_val * gaze_vector_denormalized[1] * cos_val
 
-        return (x, y)
+        return (x_mouse_coord, y_mouse_coord)
 
-    def draw_outputs(self, coords, image):
+
+    def draw_outputs(self, gaze_vector, coords, list_angles, landmarks_output,  image, face_image):
         '''
+        Draw the elements detected by the model.
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''
-    
-        return None
+
+        p_frame = face_image.copy()
+        box = []
+
+        pairs_coords = [out.reshape((-1, 2)).tolist() for out in landmarks_output]
+
+        eyes_pairs = []
+
+        for item  in pairs_coords[0][0:5]:
+            x_, y_ = int(item[0] * p_frame.shape[1] + coords[0][0]), int(item[1] * p_frame.shape[0] + coords[0][1])
+            center = np.array((x_, y_))
+            eyes_pairs.append(center)
+            cv2.circle(image, tuple(center.astype(int)), 2, (255, 255, 0), 4)
 
 
-    def predict(self, left_eye_image, right_eye_image, list_angles, image):
+        scale = 0.4 * p_frame.shape[1]
+        gaze_x_estimation = int((gaze_vector[0]) * scale)
+        gaze_y_estimation = int(-(gaze_vector[1]) * scale)
+
+
+        cv2.arrowedLine(image,  (eyes_pairs[0][0], eyes_pairs[0][1]), ((eyes_pairs[0][0] + gaze_x_estimation),  eyes_pairs[0][1] + (gaze_y_estimation)),(0, 0, 100), 3)
+        cv2.arrowedLine(image,  (eyes_pairs[1][0], eyes_pairs[1][1]), ((eyes_pairs[1][0] + gaze_x_estimation),  eyes_pairs[1][1] + (gaze_y_estimation)),(0, 0, 100), 3)  
+        
+        return image
+  
+
+
+    def predict(self, left_eye_image, right_eye_image, coords, list_angles, landmarks_output, image, face_image):
         '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
+        :param left_eye_image: left eye image with [1x3x60x60] shape.
+        :param right_eye_image: rigth eye image with [1x3x60x60] shape.
+        :param list_angles: estimates angles (yaw, pitch and roll).
+        :param coords: bounding box.
+        :param image: complete frame.
         '''
 
-        # resize_frame = self.preprocess_input(image)
-        print("----- predict gaze estimation")
         left_eye_image = self.preprocess_input(left_eye_image)
         right_eye_image = self.preprocess_input(right_eye_image)
 
         gaze_vector = self.net.infer(inputs = {'left_eye_image': left_eye_image , 
-                                        'right_eye_image': right_eye_image, 
-                                        'head_pose_angles': list_angles})
+                                                'right_eye_image': right_eye_image, 
+                                                'head_pose_angles': list_angles})
 
-
+        output_image = self.draw_outputs(gaze_vector[self.output_name][0],coords, list_angles, landmarks_output,  image, face_image)
         cords = self.preprocess_output(gaze_vector[self.output_name][0], list_angles)
-        return  gaze_vector[self.output_name][0], cords
+        return  gaze_vector[self.output_name][0], cords, output_image
 

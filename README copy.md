@@ -26,17 +26,6 @@ Computer Pointer Controller is a computer vision application that runs Gaze esti
 ├── requirements.txt
 ```
 
-### Language setting
-| Details            |              |
-|-----------------------|---------------|
-| Programming Language: |  Python 3.5 or 3.6 |
-
-### Hardware
-
-* 6th to 10th generation Intel® Core™ processor with Iris® Pro graphics or Intel® HD Graphics.
-
-
-
 
 ### Installation of openvino
 
@@ -114,50 +103,43 @@ cd C:\Program Files (x86)\IntelSWTools\openvino_2020.4.287\bin
 (openvino_env) C:\Program Files (x86)\IntelSWTools\openvino_2020.4.287\bin>setupvars.bat
 ```
 
+
 ### Run main_script
-Now that openvino environment and setupvars are configure, we can run our main script.
 
 #### Run on CPU
-```console
-(openvino_env) c:\Users\VoxivaAI\Desktop\workspace_gustavo\github\computer_point_controller> python main_script.py  --fc_model models/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001   --hp_model models/intel/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001  --fl_model models/intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009 --ge_model models/intel/gaze-estimation-adas-0002/FP16/gaze-estimation-adas-0002  --device CPU --input_type video  --output_path result/
-```
+python main_scripts.py --model models/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001 --device CPU --input_type video  --output_path result/
+
+
+python main_script.py  --fc_model models/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001   --hp_model models/intel/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001 --device CPU --input_type video  --output_path result/
+
+
+gaze estimation
+(openvino_env) c:\Users\VoxivaAI\Desktop\workspace_gustavo\github\computer_point_controller>python main_script.py  --fc_model models/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001   --hp_model models/intel/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001  --fl_model models/intel/landmarks-regression-retail-0009/FP16/landmarks-regression-retail-0009 --ge_model models/intel/gaze-estimation-adas-0002/FP16/gaze-estimation-adas-0002  --device CPU --input_type video  --output_path result/
+
+
+
+
 
 
 ## Documentation
-Arguments for main_script:
-
-* --fc_model: path to the face detection model
-* --hp_model: path to the head pose estimation model
-* --fl_model: path to the facial landmark detection model
-* --ge_model: path to the gaze estimation model
-* --device: name of the device
-* --input_type: type of file will be feed
-* --video:  path to the video file
-* --output_path: path to save the results
+*TODO:* Include any documentation that users might need to better understand your project code. For instance, this is a good place to explain the command line arguments that your project supports.
 
 
 ## Benchmarks
-Sum of inference time for each model.
-![Inference Time](img/inference_time.PNG)
-
-Average inference time for each model.
-![Mean Inference Time](img/mean_inference_time.PNG)
+*TODO:* Include the benchmark results of running your model on multiple hardwares and multiple model precisions. Your benchmarks can include: model loading time, input/output processing time, model inference time etc.
 
 
-### Model size
-The size of the model pre- and post-conversion was...
-| |face-detection-adas-binary-0001|head-pose-estimation-adas-0001|landmarks-regression-retail-0009|gaze-estimation-adas-0002|
-|-|-|-|-|-|
-|BIN|1.7 MB|3.7 MB|373 KB|3.6 MB|
-|XML|114 KB|50 KB|42 KB|65 KB|
-|PRECISION|FP32|FP16|FP16|FP16|
+## Results
+*TODO:* Discuss the benchmark results and explain why you are getting the results you are getting. For instance, explain why there is difference in inference time for FP32, FP16 and INT8 models.
 
 
-## Results and next steps
-* The Face detection takes most of the time to infer it might be the bottleneck.
-* Although, Gaze detection have several process and inputs it only takes 0.001 seconds in average.
-* It's necessary optimize the bottleneck using VTune.
+## Stand Out Suggestions
+This is where you can provide information about the stand out suggestions that you have attempted.
 
 
-## Edge Cases
-In the near future the project will be tested on other devices like the NCS2.
+### Async Inference
+If you have used Async Inference in your code, benchmark the results and explain its effects on power and performance of your project.
+
+
+### Edge Cases
+There will be certain situations that will break your inference flow. For instance, lighting changes or multiple people in the frame. Explain some of the edge cases you encountered in your project and how you solved them to make your project more robust.

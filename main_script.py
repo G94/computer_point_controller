@@ -13,8 +13,8 @@ from src.head_pose_estimation import HeadPoseEstimation
 from src.facial_landmark_detection import FacialLandmarkDetection
 from src.gaze_estimation import GazeEstimation
 from src.mouse_controller import MouseController
-
-
+import logging as log
+import pandas as pd
 
 ### OpenVino Modules
 from openvino.inference_engine import IENetwork, IECore
@@ -136,6 +136,10 @@ def faciallandmarkdetection_main(args):
 
 
 def gazedetection_main(args):
+    logger = log.getLogger('computer_point_controler_application')
+    logger.setLevel(log.DEBUG)
+    
+
     ## models arguments
     fc_model = args.fc_model
     hp_model = args.hp_model
@@ -162,6 +166,10 @@ def gazedetection_main(args):
     ge_detection = GazeEstimation(ge_model, device)
     ge_detection.load_model()
 
+    model_loading_time = time.time() - start_model_load_time
+    logger.info("Models Loading : {}".format(model_loading_time))
+
+
 
     ### Image Feeder
     feed = InputFeeder(input_type = file_type, input_file = video_file)
@@ -177,30 +185,61 @@ def gazedetection_main(args):
 
     fps = int(feed.cap.get(cv2.CAP_PROP_FPS))
 
-    # out_video = cv2.VideoWriter(os.path.join(output_path, 'gazeestimation_video.mp4'), cv2.VideoWriter_fourcc(*'avc1'), fps, (initial_w, initial_h), True)
+    out_video = cv2.VideoWriter(os.path.join(output_path, 'gazeestimation_video.mp4'), cv2.VideoWriter_fourcc(*'avc1'), fps, (initial_w, initial_h), True)
 
-    for flag, frame in feed.next_batch():    
+    # fd = []
+    # hp = []
+    # fl = []
+    # ge = []
+
+    overall = []
+    for flag, frame in feed.next_batch(): 
+        overall_inference = time.time()   
         if not flag:
             break
 
+        start_inference = time.time() 
         image, coords, face_image = fc_detection.predict(frame)
+        fc_inference_time = time.time() - start_inference
+        # fd.append(fc_inference_time)
+        logger.info("FaceDetection Inference Time : {}".format(fc_inference_time))
+
 
         ### the cropped face image pass to the other models
+        start_inference = time.time() 
         hp_image, list_angles = hpe_detection.predict(face_image, coords)
-        fl_image, l_eye_img, r_eye_img, eye_coords = fl_detection.predict(face_image, coords)
+        hp_inference_time = time.time() - start_inference
+        # hp.append(hp_inference_time)
+        logger.info("Head Pose Estimation Inference Time : {}".format(hp_inference_time))
+
+        start_inference = time.time() 
+        fl_image, l_eye_img, r_eye_img, eye_coords, landmarks_output = fl_detection.predict(face_image, coords)
+        fl_inference_time = time.time() - start_inference
+        # fl.append(fl_inference_time)
+        logger.info("Facial LandMark Estimation Inference Time : {}".format(fl_inference_time))
+        print("Facial LandMark Estimation Inference Time : {}".format(fl_inference_time))
 
         ## validation of the right image is being shared  accross each object
         # cv2.imshow("r_eye_img", r_eye_img)
         # cv2.imshow("l_eye_img", l_eye_img)
         # cv2.waitKey(2000)
 
-        mouse_coord, gaze_output_random = ge_detection.predict(l_eye_img, r_eye_img, list_angles, face_image)
-       
+        start_inference = time.time()
+        mouse_coord, coord_mouse, output_image = ge_detection.predict(l_eye_img, r_eye_img,  coords, list_angles, landmarks_output, frame, face_image)
+        ge_inference_time = time.time() - start_inference
+        # ge.append(ge_inference_time)
+        logger.info("Gaze Estimation Inference Time : {}".format(ge_inference_time))
+        print("Gaze Estimation Inference Time : {}".format(ge_inference_time))
+        # validation of the right image is being shared  accross each object
+        # cv2.imshow("Gazeimage", output_image)
+        # cv2.waitKey(0)
+
         mouse_controller.move(mouse_coord[0], mouse_coord[1])
-        # out_video.write(output_image)
-
+        out_video.write(output_image)
+    
     feed.close()
-
+    # df = pd.DataFrame({'facedection':fd,'headpose':hp,'landmark':fl, 'gaze':ge})
+    # df.to_excel("inference_time.xlsx", index=False)
 if __name__=='__main__':
     import argparse
 
@@ -210,15 +249,11 @@ if __name__=='__main__':
     parser.add_argument('--fl_model', required = True, help = "Facial Landmark Detection model folder")
     parser.add_argument('--ge_model', required = True, help = "Gaze Estimation model folder")
 
-    parser.add_argument('--device', default = 'CPU')
-    parser.add_argument('--input_type', default = 'video')
-    parser.add_argument('--video', default = './bin/demo.mp4')
-    parser.add_argument('--output_path', default = './result/')
+    parser.add_argument('--device', default = 'CPU', help = "device")
+    parser.add_argument('--input_type', default = 'video', help = "type of input file")
+    parser.add_argument('--video', default = './bin/demo.mp4', help = "path of the video file")
+    parser.add_argument('--output_path', default = './result/',help = "path to store the results")
 
-    # parser.add_argument('--queue_param', default = None)
-    # parser.add_argument('--output_path', default = '/results')
-    # parser.add_argument('--max_people', default = 2)
-    # parser.add_argument('--threshold', default = 0.60)
 
     args = parser.parse_args()
 
@@ -227,8 +262,6 @@ if __name__=='__main__':
     # headdetection_main(args)
     # faciallandmarkdetection_main(args)
     gazedetection_main(args)
-
-    ### run main script
 
 
 

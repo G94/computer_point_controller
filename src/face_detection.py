@@ -17,7 +17,13 @@ class FaceDetection:
 
     def __init__(self, model_name, device='CPU', extensions=None):
         '''
-        TODO: Use this to set your instance variables.
+        :param core: 
+        :param model:
+        :param net:
+
+        :param input_name:
+        :param input_shape:
+        :param output_shape:
         '''
 
         self.model_weights = model_name+'.bin'
@@ -40,9 +46,9 @@ class FaceDetection:
 
     def load_model(self):
         '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
+        This function load the model and their metada.
+        Specify the image input metadata.
+        Specify the output metadata.
         '''
 
         self.core = IECore()
@@ -64,6 +70,9 @@ class FaceDetection:
         raise NotImplementedError
 
     def set_image_metadata(self, image):
+        """
+        Specify input image metadata
+        """
         if self.flag == False:
             self.img_width = image.shape[1]
             self.img_height = image.shape[0]
@@ -106,6 +115,7 @@ class FaceDetection:
 
     def draw_outputs(self, coords, image):
         '''
+        Draw the elements detected by the model.
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''

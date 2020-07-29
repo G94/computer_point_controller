@@ -5,6 +5,7 @@ This has been provided just to give you an idea of how to structure your model c
 import os
 import cv2
 import time
+import sys
 from math import cos, sin, pi
 
 from openvino.inference_engine import IENetwork, IECore
@@ -15,12 +16,18 @@ ANGLE_CONVERSION = 180.0
 
 class HeadPoseEstimation:
     '''
-    Class for the Face Detection Model.
+    Class for the HeadPoseEstimation.
     '''
 
     def __init__(self, model_name, device='CPU', extensions=None):
         '''
-        TODO: Use this to set your instance variables.
+        :param core: 
+        :param model:
+        :param net:
+
+        :param input_name:
+        :param input_shape:
+        :param output_shape:
         '''
 
         self.model_weights = model_name+'.bin'
@@ -41,17 +48,22 @@ class HeadPoseEstimation:
         self.img_height = None    
         self.flag = False
 
+
     def load_model(self):
         '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
+        This function load the model and their metada.
+        Specify the image input metadata.
+        Specify the output metadata.
         '''
 
         self.core = IECore()
-        self.model = IENetwork(self.model_structure, self.model_weights)   
-        self.net = self.core.load_network(network = self.model, device_name = self.device, num_requests = 1)
-
+        try:
+            self.model = IENetwork(self.model_structure, self.model_weights)   
+            self.net = self.core.load_network(network = self.model, device_name = self.device, num_requests = 1)
+        
+        except FileNotFoundError as fnf_error:
+            log.error("The file was not found : {}".format(model_loading_time))
+            sys.exit(0)
         self.input_name = next(iter(self.model.inputs))
         self.input_shape = self.model.inputs[self.input_name].shape
         self.output_name = next(iter(self.model.outputs))
@@ -67,6 +79,9 @@ class HeadPoseEstimation:
         raise NotImplementedError
 
     def set_image_metadata(self, image):
+        """
+        Specify input image metadata
+        """
         if self.flag == False:
             self.img_width = image.shape[1]
             self.img_height = image.shape[0]
@@ -74,8 +89,7 @@ class HeadPoseEstimation:
 
     def preprocess_input(self, image):
         '''
-        Before feeding the data into the model for inference,
-        you might have to preprocess it. This function is where you can do that.
+        :param image:
         '''
         self.set_image_metadata(image)
 
@@ -88,8 +102,7 @@ class HeadPoseEstimation:
 
     def preprocess_output(self, outputs):
         '''
-        Before feeding the output of this model to the next model,
-        you might have to preprocess the output. This function is where you can do that.
+        :param outputs:
 
         '''
         labels = ['angle_y_fc','angle_p_fc','angle_r_fc']
@@ -106,8 +119,10 @@ class HeadPoseEstimation:
 
     def draw_outputs(self, list_angles, image, coords):
         '''
-        :param coords: coordinates of the box
-        :param image: image where to draw the box
+        Draw the elements detected by the model.
+        :param coords: Face coordinates
+        :param list_angles: yaw, pitch and roll from Head pose estimation
+        :return image: Image with vectors
         '''
      
         x_facet_distance =  coords[0][2] - coords[0][0] 
@@ -125,25 +140,25 @@ class HeadPoseEstimation:
         cos_p = cos(pitch * pi / ANGLE_CONVERSION)
         cos_r = cos(roll * pi / ANGLE_CONVERSION)
         
-        axisLength = 0.5 * coords[0][0]
+        scale = 0.5 * coords[0][0]
         
         x_center = int(coords[0][0] + x_facet_distance / 2)
         y_center = int(coords[0][1] + y_facet_distance / 2)
 
 
         cv2.line(image, (x_center, y_center), 
-                        (((x_center) + int (axisLength * (cos_r * cos_y + sin_y * sin_p * sin_r))),
-                        ((y_center) + int (axisLength * cos_p * sin_r))),
+                        (((x_center) + int (scale * (cos_r * cos_y + sin_y * sin_p * sin_r))),
+                        ((y_center) + int (scale * cos_p * sin_r))),
                         (0, 0, 255), thickness=2)
 
         cv2.line(image, (x_center, y_center), 
-                        (((x_center) + int (axisLength * (cos_r * sin_y * sin_p + cos_y * sin_r))),
-                        ((y_center) - int (axisLength * cos_p * cos_r))),
+                        (((x_center) + int (scale * (cos_r * sin_y * sin_p + cos_y * sin_r))),
+                        ((y_center) - int (scale * cos_p * cos_r))),
                         (0, 255, 0), thickness=2)
 
         cv2.line(image, (x_center, y_center), 
-                        (((x_center) + int (axisLength * sin_y * cos_p)),
-                        ((y_center) + int (axisLength * sin_p))),
+                        (((x_center) + int (scale * sin_y * cos_p)),
+                        ((y_center) + int (scale * sin_p))),
                         (255, 0, 0), thickness=2)       
 
         return image
@@ -151,9 +166,7 @@ class HeadPoseEstimation:
 
     def predict(self, image, coords):
         '''
-        TODO: You will need to complete this method.
-        This method is meant for running predictions on the input image.
-
+        :param image: face image
         :return: list of angles
         '''
 

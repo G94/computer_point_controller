@@ -13,12 +13,18 @@ from openvino.inference_engine import IENetwork, IECore
 
 class FacialLandmarkDetection:
     '''
-    Class for the Face Detection Model.
+    Class for the FacialLandmarkDetection.
     '''
 
     def __init__(self, model_name, device='CPU', extensions=None):
         '''
-        TODO: Use this to set your instance variables.
+        :param core: 
+        :param model:
+        :param net:
+
+        :param input_name:
+        :param input_shape:
+        :param output_shape:
         '''
 
         self.model_weights = model_name+'.bin'
@@ -41,11 +47,10 @@ class FacialLandmarkDetection:
 
     def load_model(self):
         '''
-        TODO: You will need to complete this method.
-        This method is for loading the model to the device specified by the user.
-        If your model requires any Plugins, this is where you can load them.
+        This function load the model and their metada.
+        Specify the image input metadata.
+        Specify the output metadata.
         '''
-
         self.core = IECore()
         self.model = IENetwork(self.model_structure, self.model_weights)   
         self.net = self.core.load_network(network = self.model, device_name = self.device, num_requests = 1)
@@ -65,6 +70,9 @@ class FacialLandmarkDetection:
         raise NotImplementedError
 
     def set_image_metadata(self, image):
+        """
+        Specify input image metadata
+        """
         if self.flag == False:
             self.img_width = image.shape[1]
             self.img_height = image.shape[0]
@@ -72,8 +80,7 @@ class FacialLandmarkDetection:
 
     def preprocess_input(self, image):
         '''
-        Before feeding the data into the model for inference,
-        you might have to preprocess it. This function is where you can do that.
+        :param image:
         '''
         self.set_image_metadata(image)
 
@@ -85,8 +92,9 @@ class FacialLandmarkDetection:
 
     def preprocess_output(self, outputs, image, coords):
         '''
-        Before feeding the output of this model to the next model,
-        you might have to preprocess the output. This function is where you can do that.
+        :param outputs:
+        :param image:
+        :param coords:
         '''
         box = []
         pairs_coords = [out.reshape((-1, 2)).tolist() for out in outputs]
@@ -103,9 +111,11 @@ class FacialLandmarkDetection:
 
     def draw_outputs(self, outputs, image, coords):
         '''
+        Draw the elements detected by the model.
         :param outputs: Outputs are the coordinates for each landmark
         :param image: the face image
         '''
+
         p_frame = image.copy()
         box = []
         pairs_coords = [out.reshape((-1, 2)).tolist() for out in outputs]
@@ -113,14 +123,12 @@ class FacialLandmarkDetection:
         x_facet_distance =  coords[0][2] - coords[0][0] 
         y_facet_distance =  coords[0][3] - coords[0][1] 
 
-        # x_facet_distance =  coords[0][0] 
-        # y_facet_distance =  coords[0][1]
+
       
         ## loop over each ladnmark to rescale to the scale of the face image
         eyes_pairs = []
         for item  in pairs_coords[0][0:2]:
-            # center = np.array((coords[0][0], coords[0][1])) +  np.array((x_facet_distance, y_facet_distance)) * np.array((item[0], item[1]))
-            # center = np.array((x_facet_distance, y_facet_distance)) + np.array((image.shape[0], image.shape[1])) * np.array((item[0], item[1]))
+
             x_, y_ = int(item[0] * p_frame.shape[1]), int(item[1] * p_frame.shape[0])
             center = np.array((x_, y_))
             eyes_pairs.append(center)
@@ -162,8 +170,8 @@ class FacialLandmarkDetection:
         '''
 
         resize_frame = self.preprocess_input(image)
-        outputs = self.net.infer({self.input_name: resize_frame})
-        draw_image, eyes_pairs = self.draw_outputs(outputs[self.output_name], image, coords)
+        landmarks_output = self.net.infer({self.input_name: resize_frame})
+        draw_image, eyes_pairs = self.draw_outputs(landmarks_output[self.output_name], image, coords)
         l_eye_img, r_eye_img, eye_coords = self.cropped_eye(eyes_pairs, image)
 
-        return draw_image, l_eye_img, r_eye_img, eye_coords
+        return draw_image, l_eye_img, r_eye_img, eye_coords, landmarks_output[self.output_name]
