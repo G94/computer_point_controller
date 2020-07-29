@@ -87,7 +87,6 @@ class FaceDetection:
         '''
         Before feeding the output of this model to the next model,
         you might have to preprocess the output. This function is where you can do that.
-
         '''
         coords = []
 
@@ -101,7 +100,7 @@ class FaceDetection:
                 y_min = out[4]
                 x_max = out[5]
                 y_max = out[6]
-                coords.append([x_min,y_min,x_max,y_max])
+                coords.append([x_min, y_min, x_max, y_max])
 
         return coords
 

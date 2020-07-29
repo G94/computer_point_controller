@@ -110,7 +110,6 @@ class HeadPoseEstimation:
         :param image: image where to draw the box
         '''
      
- 
         x_facet_distance =  coords[0][2] - coords[0][0] 
         y_facet_distance =  coords[0][3] - coords[0][1] 
 
@@ -132,26 +131,22 @@ class HeadPoseEstimation:
         y_center = int(coords[0][1] + y_facet_distance / 2)
 
 
-
-        #center to right
         cv2.line(image, (x_center, y_center), 
                         (((x_center) + int (axisLength * (cos_r * cos_y + sin_y * sin_p * sin_r))),
                         ((y_center) + int (axisLength * cos_p * sin_r))),
                         (0, 0, 255), thickness=2)
-        #center to top
+
         cv2.line(image, (x_center, y_center), 
                         (((x_center) + int (axisLength * (cos_r * sin_y * sin_p + cos_y * sin_r))),
                         ((y_center) - int (axisLength * cos_p * cos_r))),
                         (0, 255, 0), thickness=2)
-        
-        #Center to forward
+
         cv2.line(image, (x_center, y_center), 
                         (((x_center) + int (axisLength * sin_y * cos_p)),
                         ((y_center) + int (axisLength * sin_p))),
                         (255, 0, 0), thickness=2)       
 
         return image
-
 
 
     def predict(self, image, coords):
@@ -162,18 +157,11 @@ class HeadPoseEstimation:
         :return: list of angles
         '''
 
-        # try:
         resize_frame = self.preprocess_input(image)
-        # print("InputFeeder sucessfully completed")
 
         outputs = self.net.infer({self.input_name: resize_frame})
-        # print("InputFeeder sucessfully completed")
-        # print([self.output_name])
-        # print(outputs)
-
         list_angles = self.preprocess_output(outputs)
 
-        # print("InputFeeder sucessfully completed")
         image = self.draw_outputs(list_angles, image, coords)
         return image
 

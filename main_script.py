@@ -83,7 +83,7 @@ def headdetection_main(args):
     for flag, frame in feed.next_batch():    
         if not flag:
             break
-        
+
         image, coords = fc_detection.predict(frame)
         result = hpe_detection.predict(frame, coords)
 
@@ -92,19 +92,57 @@ def headdetection_main(args):
     feed.close()
 
 
+def faciallandmarkdetection_main(args):
+    fc_model = args.fc_model
+    fld_model = args.fl_model
+    device = args.device
+    file_type = args.input_type
+    video_file = args.video
+
+    output_path = args.output_path
+
+    start_model_load_time = time.time()
+
+    fl_detection = FacialLandmarkDetection(fld_model, device)
+    fl_detection.load_model()
+
+    fc_detection = FaceDetection(fc_model, device)
+    fc_detection.load_model()
+
+
+    feed = InputFeeder(input_type = file_type, input_file = video_file)
+    feed.load_data()
+    
+    initial_w = int(feed.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    initial_h = int(feed.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    video_len = int(feed.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = int(feed.cap.get(cv2.CAP_PROP_FPS))
+
+    out_video = cv2.VideoWriter(os.path.join(output_path, 'faciallandmark_video.mp4'), cv2.VideoWriter_fourcc(*'avc1'), fps, (initial_w, initial_h), True)
+
+    for flag, frame in feed.next_batch():    
+        if not flag:
+            break
+
+        image, coords = fc_detection.predict(frame)
+        output_image = fl_detection.predict(frame, coords)
+        out_video.write(output_image)
+
+    feed.close()
+
 
 if __name__=='__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fc_model', required = True,  help = "Face detection model folder")
-    parser.add_argument('--hp_model', required = True, help = "Head pose estimation model folder")
+    parser.add_argument('--fc_model',  required = True,  help = "Face detection model folder")
+    parser.add_argument('--hp_model',  required = True, help = "Head pose estimation model folder")
+    parser.add_argument('--fl_model', required = True, help = "Facial landmark detection model folder")
 
     parser.add_argument('--device', default = 'CPU')
     parser.add_argument('--input_type', default = 'video')
     parser.add_argument('--video', default = './bin/demo.mp4')
     parser.add_argument('--output_path', default = './result/')
-
 
     # parser.add_argument('--queue_param', default = None)
     # parser.add_argument('--output_path', default = '/results')
@@ -115,8 +153,8 @@ if __name__=='__main__':
 
     ### test each model on my local computer
     # facedetection_main(args)
-    headdetection_main(args)
-    # faciallandmarkdetection_main(args)
+    # headdetection_main(args)
+    faciallandmarkdetection_main(args)
 
     ### run main script
 

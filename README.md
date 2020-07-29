@@ -41,7 +41,7 @@ cd C:\Program Files (x86)\IntelSWTools\openvino_2020.4.287\bin
 ### Run main_script
 python main_scripts.py --model models/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001 --device CPU --input_type video  --output_path result/
 
-python main_scripts.py --model models/intel/head-pose-estimation-adas-0001/head-pose-estimation-adas-0001 --device CPU --input_type video  --output_path result/
+python main_script.py  --fc_model models/intel/face-detection-adas-binary-0001/FP32-INT1/face-detection-adas-binary-0001   --hp_model models/intel/head-pose-estimation-adas-0001/FP16/head-pose-estimation-adas-0001 --device CPU --input_type video  --output_path result/
 
 
 
