@@ -7,8 +7,11 @@ import cv2
 import time
 import math
 import numpy as np
-
+from math import cos, sin, pi
 from openvino.inference_engine import IENetwork, IECore
+import sys
+
+ANGLE_CONVERSION = 180.0
 
 
 class GazeEstimation:
@@ -16,7 +19,7 @@ class GazeEstimation:
     Class for the GazeEstimation.
     '''
 
-    def __init__(self, model_name, device='CPU', extensions=None):
+    def __init__(self, model_name, device='CPU', extensions = None, flag_fe=True, flag_he=True, flag_fl=True, flag_gz=True, show_image = False):
         '''
         :param core: 
         :param model:
@@ -44,6 +47,13 @@ class GazeEstimation:
         self.img_width = None
         self.img_height = None    
         self.flag = False
+
+        ### Image Metadata
+        self.show_face_detection = flag_fe
+        self.show_he_estimation = flag_he    
+        self.show_fl_detection= flag_fl
+        self.show_gz_estimation = flag_gz
+        self.show_image =  show_image
 
 
     def load_model(self):
@@ -116,29 +126,87 @@ class GazeEstimation:
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''
-
         p_frame = face_image.copy()
         box = []
 
+
+        if self.show_face_detection:
+            for ob in coords:
+                    left_facet = (int(ob[0]), int(ob[1]))
+                    right_facet = (int(ob[2]), int(ob[3]))    
+                    cv2.rectangle(image, left_facet, right_facet, (0, 55, 255), 1)
+                      
+
+        if self.show_he_estimation:
+            x_facet_distance =  coords[0][2] - coords[0][0] 
+            y_facet_distance =  coords[0][3] - coords[0][1] 
+
+            yaw = list_angles[0]
+            pitch = list_angles[1]
+            roll = list_angles[2]
+
+            sin_y = sin(yaw * pi / ANGLE_CONVERSION)
+            sin_p = sin(pitch * pi / ANGLE_CONVERSION)
+            sin_r = sin(roll * pi / ANGLE_CONVERSION)
+
+            cos_y = cos(yaw * pi / ANGLE_CONVERSION)
+            cos_p = cos(pitch * pi / ANGLE_CONVERSION)
+            cos_r = cos(roll * pi / ANGLE_CONVERSION)
+            
+            scale = 0.5 * coords[0][0]
+            
+            x_center = int(coords[0][0] + x_facet_distance / 2)
+            y_center = int(coords[0][1] + y_facet_distance / 2)
+
+            cv2.line(image, (x_center, y_center), 
+                            (((x_center) + int (scale * (cos_r * cos_y + sin_y * sin_p * sin_r))),
+                            ((y_center) + int (scale * cos_p * sin_r))),
+                            (0, 0, 255), thickness = 2)
+
+            cv2.line(image, (x_center, y_center), 
+                            (((x_center) + int (scale * (cos_r * sin_y * sin_p + cos_y * sin_r))),
+                            ((y_center) - int (scale * cos_p * cos_r))),
+                            (0, 255, 0), thickness = 2)
+
+            cv2.line(image, (x_center, y_center), 
+                            (((x_center) + int (scale * sin_y * cos_p)),
+                            ((y_center) + int (scale * sin_p))),
+                            (255, 0, 0), thickness = 2)       
+
+
+        
+
         pairs_coords = [out.reshape((-1, 2)).tolist() for out in landmarks_output]
-
         eyes_pairs = []
-
         for item  in pairs_coords[0][0:5]:
             x_, y_ = int(item[0] * p_frame.shape[1] + coords[0][0]), int(item[1] * p_frame.shape[0] + coords[0][1])
             center = np.array((x_, y_))
             eyes_pairs.append(center)
-            cv2.circle(image, tuple(center.astype(int)), 2, (255, 255, 0), 4)
+
+            if self.show_fl_detection:
+                cv2.circle(image, tuple(center.astype(int)), 2, (255, 255, 0), 4)
 
 
-        scale = 0.4 * p_frame.shape[1]
-        gaze_x_estimation = int((gaze_vector[0]) * scale)
-        gaze_y_estimation = int(-(gaze_vector[1]) * scale)
+        if self.show_gz_estimation:
+            scale = 0.4 * p_frame.shape[1]
+            gaze_x_estimation = int((gaze_vector[0]) * scale)
+            gaze_y_estimation = int(-(gaze_vector[1]) * scale)
 
 
-        cv2.arrowedLine(image,  (eyes_pairs[0][0], eyes_pairs[0][1]), ((eyes_pairs[0][0] + gaze_x_estimation),  eyes_pairs[0][1] + (gaze_y_estimation)),(0, 0, 100), 3)
-        cv2.arrowedLine(image,  (eyes_pairs[1][0], eyes_pairs[1][1]), ((eyes_pairs[1][0] + gaze_x_estimation),  eyes_pairs[1][1] + (gaze_y_estimation)),(0, 0, 100), 3)  
-        
+            cv2.arrowedLine(image,  (eyes_pairs[0][0], eyes_pairs[0][1]), ((eyes_pairs[0][0] + gaze_x_estimation),  eyes_pairs[0][1] + (gaze_y_estimation)),(0, 0, 100), 3)
+            cv2.arrowedLine(image,  (eyes_pairs[1][0], eyes_pairs[1][1]), ((eyes_pairs[1][0] + gaze_x_estimation),  eyes_pairs[1][1] + (gaze_y_estimation)),(0, 0, 100), 3)  
+
+        # print(self.show_image)
+
+        # sys.exit(0)
+        # if self.show_image:
+        #     print(self.show_image)
+        #     cv2.imshow("Gaze Estimation", image)
+        #     # cv2.waitKey(100000)
+        #     # sys.exit(0)
+        #     if cv2.waitKey(1) == 27: 
+        #         break
+
         return image
   
 

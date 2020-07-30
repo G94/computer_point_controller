@@ -132,7 +132,7 @@ class FacialLandmarkDetection:
             x_, y_ = int(item[0] * p_frame.shape[1]), int(item[1] * p_frame.shape[0])
             center = np.array((x_, y_))
             eyes_pairs.append(center)
-            cv2.circle(p_frame, tuple(center.astype(int)), 2, (255, 255, 0), 4)
+            # cv2.circle(p_frame, tuple(center.astype(int)), 2, (255, 255, 0), 4)
 
         return p_frame, eyes_pairs
 

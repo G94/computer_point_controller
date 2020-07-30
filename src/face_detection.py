@@ -119,6 +119,7 @@ class FaceDetection:
         :param coords: coordinates of the box
         :param image: image where to draw the box
         '''
+
         original_image = image.copy()
         box = []
         
@@ -126,7 +127,7 @@ class FaceDetection:
                 left_facet = (int(ob[0] * self.img_width), int(ob[1] * self.img_height))
                 right_facet = (int(ob[2] * self.img_width), int(ob[3] * self.img_height))    
                 
-                cv2.rectangle(image, left_facet, right_facet, (0, 55, 255), 1)
+                # cv2.rectangle(image, left_facet, right_facet, (0, 55, 255), 1)
                 box.append([left_facet[0], left_facet[1], right_facet[0], right_facet[1]])   
         
         box_1 = box[0]
@@ -142,20 +143,12 @@ class FaceDetection:
         This method is meant for running predictions on the input image.
         '''
 
-        # try:
-        resize_frame = self.preprocess_input(image)
-        # print("InputFeeder sucessfully completed")
-        outputs = self.net.infer({self.input_name: resize_frame})
-        # print("InputFeeder sucessfully completed")
-        # print([self.output_name])
-        # print(outputs)
 
+        resize_frame = self.preprocess_input(image)
+        outputs = self.net.infer({self.input_name: resize_frame})
         coords = self.preprocess_output(outputs[self.output_name])
 
-        # print("InputFeeder sucessfully completed")
         post_image, post_coord, face_image = self.draw_outputs(coords, image)
-        return post_image, post_coord, face_image
 
-        # except Exception as e:
-        #     print("Error in function self.predict:", e)
+        return post_image, post_coord, face_image
 
