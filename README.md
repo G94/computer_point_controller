@@ -202,4 +202,22 @@ The size of the model pre- and post-conversion was...
 
 
 ## Edge Cases
-In the near future the project will be tested on other devices like the NCS2.
+ Requirements:
+ * INTEL NEURAL NETWORK NCS2
+
+
+* Raspberry Pi 3 Model 3
+![raspberrypi](img/raspberrypi3b.jpg)
+
+* Camera v2.1 8M
+
+### Openvino installation in debian:
+
+
+### Vtune Optimization
+
+
+### Run Example
+
+
+
